@@ -1,8 +1,7 @@
 CC = gcc 
-CFLAGS = -Wall -std=c11
 
 ssi: ssi.c
-	$(CC) $(CFLAGS) -o ssi ssi.c -lreadline
+	$(CC) ssi.c -o ssi  -lreadline
 
 clean:
 	rm -f ssi
