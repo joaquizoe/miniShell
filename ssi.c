@@ -13,6 +13,16 @@ void tokenize(char **args, char* response);
 void basic_program(char **args);
 void change_directory(char **command);
 void run_program(char **args);
+void create_node(pid_t pid, char **command);
+void background_program(char **command);
+
+typedef struct bg_process {
+pid_t pid;
+char command[MAX_PROMPT_LENGTH];
+struct bg_process* next;
+} bg_process;
+
+bg_process *head = NULL;
 
 int main() {
 
@@ -72,7 +82,7 @@ void run_program(char **command) {
     if(strcmp(command[0], "cd") == 0) {
             change_directory(command);
         } else if(strcmp(command[0], "bg") == 0) {
-            exit(1);
+            background_program(command);
         } else if(strcmp(command[0], "bglist") == 0) {
             exit(1);
         } else {
@@ -88,6 +98,7 @@ void basic_program(char **command) {
         perror("fork failed");
         exit(1);
     }
+
     if(pid == 0) {
         execvp(command[0], command);
         perror("execvp failed");
@@ -98,11 +109,47 @@ void basic_program(char **command) {
 }
 
 void change_directory(char **command) {
-    if(command[1] == NULL) {
-        chdir(getenv("HOME"));
-    } else if(strcmp(command[1], "~") == 0) {
-        chdir(getenv("HOME"));
-    } else{
-        chdir(command[1]);
+    if(command[1] == NULL || strcmp(command[1], "~") == 0) {
+        if(chdir(getenv("HOME")) != 0) {
+            perror("cd");
+        }
+    } else { 
+        if(chdir(command[1]) != 0) {
+            perror("cd");
+        }
+    }
+}
+
+
+void create_node(pid_t pid, char **command) {
+    bg_process* node = malloc(sizeof(bg_process));
+    node->pid = pid;
+    node->command[0] = '\0';
+
+    for(int i = 1; command[i] != NULL; i++) {
+        strcat(node->command, command[i]);
+
+        if(command[i + 1] != NULL) {
+            strcat(node->command, " ");
+        }
+    }
+
+    node->next = head;
+    head = node;
+}
+
+void background_program(char **command) {
+    pid_t pid = fork();
+    
+    if(pid < 0) {
+        perror("fork failed");
+    }
+
+    if(pid == 0) {
+        execvp(command[1], &command[1]);
+        perror("execvp failed");
+        exit(1);
+    } else {
+        create_node(pid, command);
     }
 }
