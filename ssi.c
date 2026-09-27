@@ -12,7 +12,7 @@
 #include <sys/wait.h>
 #include <readline/readline.h>
 
-#define MAX_PROMPT_LENGTH 100
+#define MAX_PROMPT_LENGTH 256
 
 void create_prompt(char *prompt);
 void tokenize(char **args, char* response);
