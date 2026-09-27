@@ -1,3 +1,9 @@
+/**
+ * @brief P1: A Simple Shell Interpreter (SSI)
+ * @author Joaqui Santiago
+ * @date September 18, 2026
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -8,7 +14,7 @@
 
 #define MAX_PROMPT_LENGTH 100
 
-void print_prompt();
+void create_prompt(char *prompt);
 void tokenize(char **args, char* response);
 void basic_program(char **args);
 void change_directory(char **command);
@@ -19,28 +25,34 @@ int count_background_program();
 void background_list();
 void free_list();
 
+
+/**
+ * @brief Represents a background program in the linked list
+ */
 typedef struct bg_process {
 pid_t pid;
 char command[MAX_PROMPT_LENGTH];
 struct bg_process* next;
 } bg_process;
 
+/* Initiate the head of the linked list as NULL */
 bg_process *head = NULL;
 
 int main() {
 
     while(1) {
         char *args[MAX_PROMPT_LENGTH];
+        char prompt[MAX_PROMPT_LENGTH];
 
-        print_prompt();
+        create_prompt(prompt);
 
-        char *response = readline("");
+        char *response = readline(prompt);
 
         /* If response is NULL, terminate the program */
         if(response == NULL) {
-            exit(0);
+            exit(1);
         }
-        /* If response is Enter, create a new line */
+        /* If user presses Enter without a command, prompt again */
         if(response[0] == '\0') {
             free(response);
             continue;
@@ -56,7 +68,11 @@ int main() {
     return 0;
 }
 
-void print_prompt() {
+/**
+ * @brief Creates a prompt that includes username, hostname, and directory
+ * @param prompt The string where the created prompt will be stored
+ */
+void create_prompt(char *prompt) {
     char *username;
     char hostname[50]; 
     char directory[50];
@@ -65,9 +81,14 @@ void print_prompt() {
     gethostname(hostname, sizeof(hostname));
     getcwd(directory, sizeof(directory));
 
-    printf("%s@%s: %s > ", username, hostname, directory);
+    snprintf(prompt, MAX_PROMPT_LENGTH, "%s@%s: %s > ", username, hostname, directory);
 }
 
+/**
+ * @brief Splits the user's response into separated arguments
+ * @param args The array where the separated command arguments are stored
+ * @param response The string containing the user's response
+ */
 void tokenize(char **args, char *response) {
     int i = 0;
     char* token = strtok(response, " ");
@@ -81,6 +102,10 @@ void tokenize(char **args, char *response) {
     args[i] = NULL;
 }
 
+/**
+ * @brief Determines which command was entered and executes it
+ * @param command The array containing the command and its arguments
+ */
 void run_program(char **command) {
     if(strcmp(command[0], "cd") == 0) {
             change_directory(command);
@@ -94,6 +119,10 @@ void run_program(char **command) {
     
 }
 
+/**
+ * @brief Executes the basic programs 
+ * @param command The array containing the basic command and its arguments
+ */
 void basic_program(char **command) {
     pid_t pid = fork();
 
@@ -111,6 +140,10 @@ void basic_program(char **command) {
     }
 }
 
+/**
+ * @brief Changes the current directory 
+ * @param command The array containing the change directory command and its arguments
+ */
 void change_directory(char **command) {
     if(command[1] == NULL || strcmp(command[1], "~") == 0) {
         if(chdir(getenv("HOME")) != 0) {
@@ -123,6 +156,11 @@ void change_directory(char **command) {
     }
 }
 
+/**
+ * @brief Creates a node containing a background program
+ * @param pid The process ID of the background program
+ * @param command The array containing the background program and its arguments
+ */
 void create_node(pid_t pid, char **command) {
     bg_process *node = malloc(sizeof(bg_process));
     node->pid = pid;
@@ -136,10 +174,25 @@ void create_node(pid_t pid, char **command) {
         }
     }
 
-    node->next = head;
-    head = node;
+    node->next = NULL;
+
+    if(head == NULL) {
+        head = node;
+    } else {
+        bg_process *current = head;
+
+        while(current->next != NULL) {
+            current = current->next;
+        }
+
+        current->next = node;
+    }
 }
 
+/**
+ * @brief Executes the program in the background
+ * @param command The array containing the background program and its arguments
+ */
 void background_program(char **command) {
     if(command[1] == NULL) {
         printf("bg: missing command\n");
@@ -160,6 +213,10 @@ void background_program(char **command) {
     }
 }
 
+/**
+ * @brief Counts the current number of background programs
+ * @return The number of background programs
+ */
 int count_background_program() {
     int count = 0;
     bg_process *current = head;
@@ -172,16 +229,22 @@ int count_background_program() {
     return count;
 }
 
+/**
+ * @brief Shows the list of background programs currently running
+ */
 void background_list() {
+      int count = count_background_program();
+
     for(bg_process *current = head; current != NULL; current = current->next) {
-        printf("%d:  %s\n", current->pid, current->command);
+        printf("%d: %s\n", current->pid, current->command);
     }
 
-    int count = count_background_program();
-
-    printf("Total Background jobs:  %d\n", count);
+    printf("Total Background jobs: %d\n", count);
 }
 
+/**
+ * @brief Frees the allocated space for the background programs
+ */
 void free_list() {
     bg_process *current = head;
 
