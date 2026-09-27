@@ -7,13 +7,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <readline/readline.h>
 
 #define MAX_PROMPT_LENGTH 256
 
+/* Function Declarations */
 void create_prompt(char *prompt);
 void tokenize(char **args, char* response);
 void basic_program(char **args);
@@ -24,7 +24,7 @@ void background_program(char **command);
 int count_background_program();
 void background_list();
 void free_list();
-
+void check_background();
 
 /**
  * @brief Represents a background program in the linked list
@@ -41,6 +41,13 @@ bg_process *head = NULL;
 int main() {
 
     while(1) {
+        /* SSI parent ignores CTRL + C */
+        /* Source: https://www.tutorialspoint.com/c_standard_library/c_function_signal.htm */
+        signal(SIGINT, SIG_IGN);
+
+        /* Check if any background programs are currently running */
+        check_background();
+
         char *args[MAX_PROMPT_LENGTH];
         char prompt[MAX_PROMPT_LENGTH];
 
@@ -63,6 +70,9 @@ int main() {
 
         /* Run the program after tokenize */
         run_program(args);
+
+        /* Free the user's response */
+        free(response);
     }
 
     return 0;
@@ -132,6 +142,9 @@ void basic_program(char **command) {
     }
 
     if(pid == 0) {
+        /* Child process can stop execution with CTRL + C */
+        signal(SIGINT, SIG_DFL);
+
         execvp(command[0], command);
         perror("execvp failed");
         exit(1);
@@ -202,6 +215,7 @@ void background_program(char **command) {
     
     if(pid < 0) {
         perror("fork failed");
+        return;
     }
 
     if(pid == 0) {
@@ -255,4 +269,41 @@ void free_list() {
     }
 
     head = NULL;
+}
+
+/**
+ * @brief Checks if any background jobs have been terminated
+ */
+void check_background() {
+    /* If there are no background jobs, return to main program */
+    if(count_background_program() == 0) {
+        return;
+    }
+
+    bg_process *current = head;
+    bg_process *previous = NULL;
+
+    while(current != NULL) {
+        pid_t result = waitpid(current->pid, NULL, WNOHANG);
+
+        if(result > 0) {
+            printf("%d: %s has terminated.\n", current->pid, current->command);
+
+            bg_process *temp = current;
+
+            /* If the terminated program is the head, make the next program the head */
+            if(previous == NULL) {
+                head = current->next;
+                current = head;
+            } else {
+                previous->next = current->next;
+                current = current->next;
+            }
+
+            free(temp);     // Free the background job that terminated
+        } else {
+            previous = current;
+            current = current->next;
+        }
+    }
 }
