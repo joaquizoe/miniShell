@@ -143,6 +143,7 @@ void basic_program(char **command) {
 
     if(pid == 0) {
         /* Child process can stop execution with CTRL + C */
+        /* Source: https://www.tutorialspoint.com/c_standard_library/c_function_signal.htm */
         signal(SIGINT, SIG_DFL);
 
         execvp(command[0], command);
@@ -284,6 +285,8 @@ void check_background() {
     bg_process *previous = NULL;
 
     while(current != NULL) {
+        /* If background program has terminated, returns its pid, otherwise return 0 */
+        /* https://www.geeksforgeeks.org/c/wait-system-call-c/ */
         pid_t result = waitpid(current->pid, NULL, WNOHANG);
 
         if(result > 0) {
