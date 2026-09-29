@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <readline/readline.h>
@@ -28,6 +29,7 @@ void check_background();
 
 /**
  * @brief Represents a background program in the linked list
+ * Source: Tutorial 2
  */
 typedef struct bg_process {
 pid_t pid;
@@ -39,12 +41,11 @@ struct bg_process* next;
 bg_process *head = NULL;
 
 int main() {
+    /* SSI parent ignores CTRL + C */
+    /* Source: https://www.tutorialspoint.com/c_standard_library/c_function_signal.htm */
+    signal(SIGINT, SIG_IGN);
 
     while(1) {
-        /* SSI parent ignores CTRL + C */
-        /* Source: https://www.tutorialspoint.com/c_standard_library/c_function_signal.htm */
-        signal(SIGINT, SIG_IGN);
-
         /* Check if any background programs are currently running */
         check_background();
 
@@ -57,7 +58,8 @@ int main() {
 
         /* If response is NULL, terminate the program */
         if(response == NULL) {
-            exit(1);
+            free_list();
+            exit(0);
         }
         /* If user presses Enter without a command, prompt again */
         if(response[0] == '\0') {
@@ -126,7 +128,6 @@ void run_program(char **command) {
         } else {
             basic_program(command);
         }
-    
 }
 
 /**
