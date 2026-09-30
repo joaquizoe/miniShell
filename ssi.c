@@ -234,10 +234,10 @@ void background_program(char **command) {
         return;
     }
     pid_t pid = fork();
-    
+
     if(pid < 0) {
         perror("fork failed");
-        return;
+        exit(1);
     }
 
     if(pid == 0) {
