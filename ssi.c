@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <readline/readline.h>
+#include <readline/history.h>
 
 #define MAX_PROMPT_LENGTH 256
 
@@ -161,6 +162,7 @@ void basic_program(char **command) {
     }
 
     if(pid == 0) {
+        signal(SIGINT, SIG_DFL);
         execvp(command[0], command);
         perror("execvp failed");
         exit(1);
