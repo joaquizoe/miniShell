@@ -11,7 +11,6 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <readline/readline.h>
-#include <readline/history.h>
 
 #define MAX_PROMPT_LENGTH 256
 
@@ -94,9 +93,13 @@ int main() {
 /**
  * @brief signal hander for CTRL + C without terminating ssi
  * @param sig The signal number received
+ * Source: https://tiswww.case.edu/php/chet/readline/readline.html#Redisplay
  */
 void handler(int sig) {
     write(STDOUT_FILENO, "\n", 1);
+    rl_replace_line("", 0);
+    rl_on_new_line();
+    rl_redisplay();
 }
 
 /**
