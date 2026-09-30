@@ -15,6 +15,7 @@
 #define MAX_PROMPT_LENGTH 256
 
 /* Function Declarations */
+void handler(int sig);
 void create_prompt(char *prompt);
 void tokenize(char **args, char* response);
 void basic_program(char **args);
@@ -26,6 +27,7 @@ int count_background_program();
 void background_list();
 void free_list();
 void check_background();
+char *get_path_access(char *name);
 
 /**
  * @brief Represents a background program in the linked list
@@ -41,9 +43,17 @@ struct bg_process* next;
 bg_process *head = NULL;
 
 int main() {
-    /* SSI parent ignores CTRL + C */
-    /* Source: https://www.tutorialspoint.com/c_standard_library/c_function_signal.htm */
-    signal(SIGINT, SIG_IGN);
+    /* Source: https://man7.org/linux/man-pages/man2/sigaction.2.html */
+    /*         https://www.geeksforgeeks.org/c/signals-c-language/ */
+    struct sigaction sa = {0};
+    sa.sa_handler = &handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESTART;
+
+    if(sigaction(SIGINT, &sa, NULL) == -1){
+        perror("sigaction");
+        exit(1);
+    }
 
     while(1) {
         /* Check if any background programs are currently running */
@@ -78,6 +88,14 @@ int main() {
     }
 
     return 0;
+}
+
+/**
+ * @brief signal hander for CTRL + C without terminating ssi
+ * @param sig The signal number received
+ */
+void handler(int sig) {
+    write(STDOUT_FILENO, "\n", 1);
 }
 
 /**
@@ -143,10 +161,6 @@ void basic_program(char **command) {
     }
 
     if(pid == 0) {
-        /* Child process can stop execution with CTRL + C */
-        /* Source: https://www.tutorialspoint.com/c_standard_library/c_function_signal.htm */
-        signal(SIGINT, SIG_DFL);
-
         execvp(command[0], command);
         perror("execvp failed");
         exit(1);
@@ -181,12 +195,18 @@ void create_node(pid_t pid, char **command) {
     node->pid = pid;
     node->command[0] = '\0';
 
-    for(int i = 1; command[i] != NULL; i++) {
-        strcat(node->command, command[i]);
+    char *path = get_path_access(command[1]);
 
-        if(command[i + 1] != NULL) {
-            strcat(node->command, " ");
-        }
+    if(path != NULL) {
+        strcat(node->command, path);
+        free(path);
+    } else {
+        strcat(node->command, command[1]);
+    }
+
+    for(int i = 2; command[i] != NULL; i++) {
+        strcat(node->command, " ");
+        strcat(node->command, command[i]);
     }
 
     node->next = NULL;
@@ -287,7 +307,7 @@ void check_background() {
 
     while(current != NULL) {
         /* If background program has terminated, returns its pid, otherwise return 0 */
-        /* https://www.geeksforgeeks.org/c/wait-system-call-c/ */
+        /* Source: https://www.geeksforgeeks.org/c/wait-system-call-c/ */
         pid_t result = waitpid(current->pid, NULL, WNOHANG);
 
         if(result > 0) {
@@ -310,4 +330,33 @@ void check_background() {
             current = current->next;
         }
     }
+}
+
+/**
+ * @brief Gets the full executable path of a background command
+ * @param name Name of the command
+ * @return The full path of  the command, Null otherwise
+ * Source: Tutorial 3
+ */
+char *get_path_access(char *name) {
+    if(strchr(name, '/') != NULL) {
+        return realpath(name, NULL);
+    }
+
+    char *dirs = strdup(getenv("PATH"));
+
+    // printf("%s\n", dirs);
+    
+    for(char *dir = strtok(dirs, ":"); dir != NULL; dir = strtok(NULL, ":")) {
+        char buffer[MAX_PROMPT_LENGTH];
+        snprintf(buffer, sizeof(buffer), "%s/%s", dir, name);
+
+        if(access(buffer, X_OK) == 0) {
+            free(dirs);
+            return strdup(buffer);
+        }
+    }
+
+    free(dirs);
+    return NULL;
 }
