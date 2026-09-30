@@ -241,6 +241,12 @@ void background_program(char **command) {
     }
 
     if(pid == 0) {
+        /* Places the background child in its own process group so CTRL+C doesn't terminate it */
+        /* Source: https://man7.org/linux/man-pages/man2/getpgrp.2.html */
+        if(setpgid(0, 0) == -1) {
+            perror("setpgid");
+        }
+
         execvp(command[1], &command[1]);
         perror("execvp failed");
         exit(1);
