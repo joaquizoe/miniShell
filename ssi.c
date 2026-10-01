@@ -170,7 +170,9 @@ void basic_program(char **command) {
         perror("execvp failed");
         exit(1);
     } else {
+	signal(SIGINT, SIG_IGN);
         waitpid(pid, NULL, 0);
+	signal(SIGINT, handler);
     }
 }
 
