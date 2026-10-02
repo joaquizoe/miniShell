@@ -41,6 +41,9 @@ struct bg_process* next;
 
 /* Initiate the head of the linked list as NULL */
 bg_process *head = NULL;
+
+/* Keeps track of whether a foreground program is currently running  */
+/* Source: https://en.cppreference.com/c/program/sig_atomic_t */
 volatile sig_atomic_t foreground_running = 0;
 
 int main() {
