@@ -41,6 +41,7 @@ struct bg_process* next;
 
 /* Initiate the head of the linked list as NULL */
 bg_process *head = NULL;
+volatile sig_atomic_t foreground_running = 0;
 
 int main() {
     /* Source: https://man7.org/linux/man-pages/man2/sigaction.2.html */
@@ -97,9 +98,12 @@ int main() {
  */
 void handler(int sig) {
     write(STDOUT_FILENO, "\n", 1);
-    rl_replace_line("", 0);
-    rl_on_new_line();
-    rl_redisplay();
+
+    if(!foreground_running) {
+        rl_replace_line("", 0);
+        rl_on_new_line();
+        rl_redisplay();
+    }
 }
 
 /**
@@ -170,9 +174,9 @@ void basic_program(char **command) {
         perror("execvp failed");
         exit(1);
     } else {
-	signal(SIGINT, SIG_IGN);
+        foreground_running = 1;
         waitpid(pid, NULL, 0);
-	signal(SIGINT, handler);
+        foreground_running = 0;
     }
 }
 
