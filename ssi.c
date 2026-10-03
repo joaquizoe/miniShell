@@ -1,6 +1,6 @@
 /**
  * @brief P1: A Simple Shell Interpreter (SSI)
- * @author Joaqui Santiago
+ * @author Joaqui Zoe Santiago
  * @date September 18, 2026
  */
 
