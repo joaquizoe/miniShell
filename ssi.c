@@ -84,6 +84,11 @@ int main() {
         /* Tokenize the user's response */
         tokenize(args, response);
 
+	if(args[0] == NULL) {
+	free (response);
+	continue;
+	}
+
         /* Run the program after tokenize */
         run_program(args);
 
